@@ -3,6 +3,8 @@
 package example
 
 import javafx.beans.binding.Bindings
+import javafx.beans.property.ReadOnlyObjectWrapper
+import javafx.beans.property.ReadOnlyProperty
 import javafx.beans.property.SimpleObjectProperty
 import javafx.beans.value.ObservableValue
 import javafx.collections.FXCollections
@@ -41,8 +43,11 @@ class HelloWorld : View() {
     }
 }
 
-fun <T, K> ObservableValue<T>.map(fn: (T) -> K): ObservableValue<K> {
-    return Bindings.createObjectBinding({ fn(this.value) }, arrayOf(this))
+fun <T, K> ReadOnlyProperty<T>.map(fn: (T) -> K): ReadOnlyProperty<K> {
+    val source = this
+    return ReadOnlyObjectWrapper<K>().apply {
+        source.addListener { _, _, newValue -> this.value = fn(newValue) }
+    }
 }
 
 class HelloWorldStyle : Stylesheet() {
