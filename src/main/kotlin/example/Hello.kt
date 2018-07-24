@@ -2,36 +2,47 @@
 
 package example
 
-import javafx.beans.property.SimpleIntegerProperty
-import javafx.beans.property.SimpleStringProperty
+import javafx.beans.binding.Bindings
+import javafx.beans.property.SimpleObjectProperty
+import javafx.beans.value.ObservableValue
+import javafx.collections.FXCollections
 import tornadofx.*
 
-// This kind of definition seems have issue
-// <https://stackoverflow.com/questions/51491615/change-the-value-of-a-property-of-some-data-but-tableview-doesnt-update>
-//class User(id: Int, name: String) {
-//    val idProperty = SimpleIntegerProperty(id)
-//    var id by idProperty
-//
-//    val nameProperty = SimpleStringProperty(name)
-//    var name by nameProperty
-//}
+private val columnNames = listOf("id", "name")
+private val data = FXCollections.observableArrayList(listOf(111, "AAA"), listOf(222, "BBB"), listOf(333, "CCC"), listOf(444, "DDD"))
 
-class User(id: Int, name: String) {
-    val id = SimpleIntegerProperty(id)
-    val name = SimpleStringProperty(name)
+class RowModel(row: List<Any>) : ViewModel() {
+    val backingRow = SimpleObjectProperty(row)
 }
-
-private val data = listOf(User(111, "AAA"), User(222, "BBB"), User(333, "CCC"), User(444, "DDD")).observable()
 
 class HelloWorld : View() {
 
-    override val root = vbox {
-        tableview(data) {
-            column("id", User::id).minWidth(80)
-            column("name", User::name).minWidth(200)
+    private val rowModel = RowModel(emptyList())
+
+    override val root = hbox {
+        tableview<List<Any>>(data) {
+            columnNames.forEachIndexed { index, name ->
+                column<List<Any>, String>(name) { it.value[index].toString().toProperty() }
+            }
+            rowModel.rebindOnChange(this) { selectedRow ->
+                backingRow.value = selectedRow ?: emptyList()
+            }
+        }
+        form {
+            fieldset {
+                columnNames.forEachIndexed { index, name ->
+                    field(name) {
+                        textfield(rowModel.backingRow.map { it -> it.getOrNull(index)?.toString() ?: "" })
+                    }
+                }
+
+            }
         }
     }
+}
 
+fun <T, K> ObservableValue<T>.map(fn: (T) -> K): ObservableValue<K> {
+    return Bindings.createObjectBinding({ fn(this.value) }, arrayOf(this))
 }
 
 class HelloWorldStyle : Stylesheet() {
